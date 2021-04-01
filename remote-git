@@ -1,0 +1,96 @@
+#!/bin/bash
+#
+# Script to manage git repositories on an SSH server.
+
+REMOTE_NAME="polity"
+REMOTE_USER="git"
+REMOTE_HOST="104.245.37.228"
+REMOTE_PORT="7822"
+REMOTE_DIR="/srv/git"
+
+REPO_NAME=${2}
+REPO_DIR=${REPO_NAME}.git
+
+SAVED_DIR=${PWD}
+
+err() {
+    echo "[FATAL]: $*" >&2
+    cd ${SAVED_DIR}
+    exit 127
+}
+
+usage() {
+    echo "${0} key"
+    echo "${0} {add|delete} <repository name>"
+    echo "${0} usage"
+    exit 0
+}
+
+makedir() {
+    mkdir ${REPO_NAME} \
+        && echo "Created directory ${REPO_NAME}." \
+        || err "Error while making directory ${REPO_NAME}."
+}
+
+makerepo() {
+    git init ${REPO_NAME} > /dev/null 2>&1 \
+        && echo "Created repository in ${REPO_NAME}." \
+        || err "Error while making git repository in ${REPO_NAME}."
+}
+cleanup() {
+    echo "Cleaning up temporary files."
+    cd ${SAVED_DIR}
+    rm -rf ${REPO_DIR} > /dev/null 2>&1
+}
+
+key() {
+    echo "Copy user's SSH key to ${REMOTE_HOST}"
+    ssh-copy-id -p ${REMOTE_PORT} ${REMOTE_USER}@${REMOTE_HOST} > /dev/null 2>&1 \
+        || err "Error copying SSH key to ${REMOTE_HOST}"
+}
+
+add() {
+    [[ -n ${REPO_NAME} ]] || err "Repository name not specified."
+    [[ -d ${REPO_NAME} ]] \
+        && echo "Using existing directory ${REPO_NAME}." \
+        || makedir
+    [[ -d "${REPO_NAME}/.git" ]] \
+        && echo "Using existing git repository in ${REPO_NAME}." \
+        || makerepo
+    echo "Making temporary bare copy of repository ${REPO_NAME}."
+    git clone --bare ${REPO_NAME} > /dev/null 2>&1 \
+        || err "Error making bare copy of ${REPO_NAME}."
+    echo "Securely copying ${REPO_NAME} bare repository to ${REMOTE_HOST}."
+    scp -r -P ${REMOTE_PORT} ${REPO_DIR} \
+        ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_DIR} > /dev/null 2>&1 \
+        || err "Error copying ${REPO_NAME} to ${REMOTE_HOST}."
+    echo "Adding ${REMOTE_HOST} remote repository to git config for ${REPO_NAME}."
+    cd ${REPO_NAME}
+    git remote add ${REMOTE_NAME} \
+        ssh://${REMOTE_HOST}:${REMOTE_PORT}${REMOTE_DIR}/${REPO_DIR} > /dev/null 2>&1
+    cleanup
+}
+
+delete() {
+    [[ -n ${REPO_NAME} ]] || err "Repository name not specified."
+    [[ -d ${REPO_NAME} ]] || err "Repository ${REPO_NAME} does not exist."
+    [[ -d "${REPO_NAME}/.git" ]] || err "${REPO_NAME} is not a git repository."
+    cd ${REPO_NAME}
+    echo "Removing ${REMOTE_NAME} remote entry from ${REPO_NAME} repository config."
+    git remote remove ${REMOTE_NAME} > /dev/null 2>&1 \
+        || err "Error removing ${REMOTE_NAME} remote entry from ${REPO_NAME} repository."
+    echo "Deleting ${REPO_NAME} repository on ${REMOTE_HOST}."
+    remote_command="rm -rf ${REMOTE_DIR}/${REPO_DIR}"
+    ssh -p ${REMOTE_PORT} ${REMOTE_USER}@${REMOTE_HOST} \
+        "${remote_command}" \
+        || err "Error removing ${REPO_NAME} from ${REMOTE_HOST}"
+    cd ${SAVED_DIR}
+}
+
+case "${1}" in
+    'key') key ;;
+    'add') add ;;
+    'delete') delete ;;
+    *) usage ;;
+esac
+
