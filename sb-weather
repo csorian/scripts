@@ -1,0 +1,6 @@
+#!/bin/sh
+
+METRIC=1
+LOCATION=BRS
+
+curl --connect-timeout 30 -s http://rss.accuweather.com/rss/liveweather_rss.asp\?metric\=${METRIC}\&locCode\=$LOCATION | perl -ne 'if (/Currently/) {chomp;/\<title\>Currently: (.*)?\<\/title\>/; print "$1"; }'

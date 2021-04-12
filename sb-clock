@@ -1,0 +1,2 @@
+#!/bin/sh
+printf "%s %s" "$(date '+%F %R')" "$(TZ='America/Toronto' date '+%R')"

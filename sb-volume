@@ -1,0 +1,8 @@
+#!/bin/sh
+
+# Volume
+
+vol="$(pamixer --get-volume)"
+volicon="v"
+[ $(pamixer --get-mute) = true ] && volicon="m"
+printf "%s%d%%" "$volicon" "$vol"

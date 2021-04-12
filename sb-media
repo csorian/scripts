@@ -1,0 +1,26 @@
+#!/bin/bash
+
+mpccurrent=$(mpc current)
+
+if [ ! -z "${mpccurrent}" ]; then
+    mpcstatus=$(mpc status | sed -n 2p)
+else
+    current="栗";
+fi
+
+mpcstate=$(mpc status | sed -n 2p | tr -cd [:alpha:])
+
+case ${mpcstate} in
+    playing)
+        listcount=$(echo $mpcstatus | awk '{print $2}');
+        current="${mpccurrent} ${listcount}";
+        ;;
+    paused)
+        current=""
+        ;;
+    *)
+        current="栗"
+        ;;
+esac
+
+printf "%s" "$current"

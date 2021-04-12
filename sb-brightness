@@ -1,0 +1,5 @@
+#!/bin/sh
+
+bright=$(xbacklight -get | awk -F'[.]' '{print $1}')
+brighticon="s"
+printf "%s%d%% " "$brighticon" "$bright"

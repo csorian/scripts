@@ -1,0 +1,18 @@
+#!/bin/bash
+
+mpccurrent=$(mpc current)
+
+if [ ! -z "${mpccurrent}" ]; then
+    mpcstatus=$(mpc status | sed -n 2p)
+else
+    current="-";
+fi
+
+if [ ${mpcstatus%% *} != "[playing]" ]; then
+    current="-";
+else
+    listcount=$(echo $mpcstatus | awk '{print $2}');
+    current="${mpccurrent} ${listcount}";
+fi
+
+printf "%s" "$current"

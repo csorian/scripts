@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# Network traffic
+
+# TODO
+
+# Connection status
+
+case "$(cat /sys/class/net/wl*/operstate 2>/dev/null)" in
+    down) wifi="x" ;;
+    up) wifi="$(awk '/^\s*w/ { print "w", int($3 * 100 / 70) "%" }' /proc/net/wireless)" ;;
+esac
+
+wifistatus=$(echo "$wifi" | sed 's/ //g')
+
+printf "%s%s%s\n" \
+    "$(sed "s/down//;s/up/e/" /sys/class/net/e*/operstate 2>/dev/null)" \
+    "$(sed "s/.*/t/" /sys/class/net/polity*/operstate 2>/dev/null)" \
+    "$wifistatus"

@@ -1,0 +1,34 @@
+#!/bin/sh
+
+# Screen Brightness
+
+bright=$(xbacklight -get | awk -F'[.]' '{print $1}')
+brighticon="s"
+printf "%s%d%% " "$brighticon" "$bright"
+
+# Volume
+
+vol="$(pamixer --get-volume)"
+volicon="v"
+[ $(pamixer --get-mute) = true ] && volicon="m"
+printf "%s%d%% " "$volicon" "$vol"
+
+# Battery
+
+for battery in /sys/class/power_supply/BAT?*; do
+    # If non-first battery, print a space separator.
+    [ -n "${capacity+x}" ] && printf " "
+    # Sets up the status and capacity
+    case "$(cat "$battery/status")" in
+        "Full") status="c" ;;
+        "Discharging") status="b" ;;
+        "Charging") status="c" ;;
+        "Not charging") status="b" ;;
+        "Unknown") status="?" ;;
+    esac
+    capacity=$(cat "$battery/capacity")
+    # Will make a warn variable if discharging and low
+    [ "$status" = "b" ] && [ "$capacity" -le 20 ] && warn="!"
+    # Prints the info
+    printf "%s%s%d%%" "$warn" "$status" "$capacity"; unset warn
+done && exit 0
